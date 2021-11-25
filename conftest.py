@@ -1,26 +1,22 @@
+import random
+import string
 import pytest
-import requests
+import config
+import logging
+
+
+logging.basicConfig(level=logging.INFO, filename="test.log",  format='[%(asctime)s] %(message)s')
+
 
 @pytest.fixture(scope="function")
 def api():
+    logger = logging.getLogger('Testlogger')
     # Сгенерируем случайного пользователя
-    user_name = random_username()
+    symbol = string.ascii_letters
+    user_name = config.PREFIX + "".join([random.choice(symbol) for i
+                                         in range(random.randrange(config.MAX_NAME_LENGTH))])
+    logger.info(f'Generated random user: {user_name}')
     if config.API_KEY == '':
-        raise ValueError('Can not initalize fixture! API_KEY environment variable not set.')
+        logger.error('Can not initialize fixture! API_KEY environment variable not set.')
+        raise ValueError('Can not initialize fixture! API_KEY environment variable not set.')
     return config.MailsacApi(user_name, config.API_KEY)
-
-@pytest.fixture(scope="function")
-def prepaired_inbox_session(api):
-    """"Фикстура для подготовки ящика, пользователя и API, а также освобождения ящика после теста"""
-    # Получим доступ к ящику
-    if requests.get(api.reserve_inbox, headers=api.headers).status_code != 200:
-        raise ValueError(f'Selected mailbox {api.user_name} is owned by another account')
-    # На всякий случай очистим почтовый ящик
-    if requests.delete(api.process_messages, headers=api.request_headers) != 204:
-        raise ValueError(f'Failed to clear mailbox {user_name}, returned code {result.status_code}')
-    yield
-    # На всякий случай очистим почтовый ящик
-    print('deleted')
-    requests.delete(api.process_messages, headers=api.request_headers)
-    # Освободим почтовый ящик
-    requests.delete(api.reserve_inbox, headers=api.headers).status_code
