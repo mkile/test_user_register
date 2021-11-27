@@ -1,22 +1,23 @@
-import random
-import string
 import pytest
-import config
-import logging
+import mailapi
+import settings
+
+from string import ascii_letters
+from random import choice, randrange
+from logging import basicConfig, getLogger, INFO
 
 
-logging.basicConfig(level=logging.INFO, filename="test.log",  format='[%(asctime)s] %(message)s')
+basicConfig(level=INFO, filename="test.log",  format='[%(asctime)s] %(message)s')
 
 
 @pytest.fixture(scope="function")
 def api():
-    logger = logging.getLogger('Testlogger')
+    logger = getLogger('Testlogger')
     # Сгенерируем случайного пользователя
-    symbol = string.ascii_letters
-    user_name = config.PREFIX + "".join([random.choice(symbol) for i
-                                         in range(random.randrange(config.MAX_NAME_LENGTH))])
+    symbol = ascii_letters
+    user_name = settings.PREFIX + "".join([choice(symbol) for i in range(randrange(settings.MAX_NAME_LENGTH))])
     logger.info(f'Generated random user: {user_name}')
-    if config.API_KEY == '':
+    if settings.API_KEY == '':
         logger.error('Can not initialize fixture! API_KEY environment variable not set.')
         raise ValueError('Can not initialize fixture! API_KEY environment variable not set.')
-    return config.MailsacApi(user_name, config.API_KEY)
+    return mailapi.MailsacApi(user_name, settings.API_KEY)
