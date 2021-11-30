@@ -5,6 +5,11 @@ from time import sleep
 from logging import getLogger
 
 
+def report_error(logger, error_msg):
+    logger.error(error_msg)
+    raise ValueError(error_msg)
+
+
 # Написано под сервис Mailsac, а Mailinator так и не подтвердил триальный доступ
 @pytest.mark.parametrize('attempt', range(settings.TESTS_COUNT))
 def test_user_register(attempt, api):
@@ -17,7 +22,7 @@ def test_user_register(attempt, api):
     logger.info(f'Sending registration request.')
     result = post(settings.REGISTER_LINK, headers=settings.REGISTER_HEADERS, data=register_data)
     if result.status_code != 200:
-        raise ValueError(f'Registration Failure, for user name {api.user_name} return code {result.status_code}')
+        report_error(logger, f'Registration Failure, for user name {api.user_name} return code {result.status_code}')
     logger.info(f'Registration successful.')
     # Если сервер ответил кодом 200, пытаемся получить по API с почтового сервера список сообщений
     logger.info(f'Attempting email check')
@@ -28,14 +33,14 @@ def test_user_register(attempt, api):
         logger.info('Getting messages from server')
         result = api.get_messages()
         if result['status_code'] != 200:
-            raise ValueError(f'Failed to retrieve messages for account {api.user_name}, '
-                             f'return code {result["status_code"]}')
+            report_error(logger, f'Failed to retrieve messages for account {api.user_name}, '
+                                 f'return code {result["status_code"]}')
         logger.info('Messages received successfully.')
         # Получим первую ссылку из первого сообщения в ящике
         if len(result['result']) > 0:
             if len(result['result'][0]['links']) > 0:
                 url_from_email = result['result'][0]['links'][0]
-                logger.info(f'Recieved confirmation link {url_from_email}')
+                logger.info(f'Received confirmation link {url_from_email}')
                 # Отправим запрос на подтверждение регистрации
                 result = get(url=url_from_email)
                 logger.info(f'Going to confirmation link...')
@@ -45,4 +50,4 @@ def test_user_register(attempt, api):
                 logger.warning(f'Could not get link. Message has {len(result.json()[0]["links"])}')
         else:
             logger.warning(f'Could not get Message. Inbox has {len(result.json())} messages')
-    raise ValueError(f'No messages received for account {api.user_name} for {settings.RETRIES_COUNT} attempts.')
+    report_error(logger, f'No messages received for account {api.user_name} for {settings.RETRIES_COUNT} attempts.')
